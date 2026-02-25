@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boston's Layered Inequality — A Spatial Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c0f;
+    --bg-card: #141418;
+    --bg-card-alt: #1a1a20;
+    --text: #e8e6e1;
+    --text-muted: #9a968e;
+    --accent: #c45d3e;
+    --accent-light: #e8754f;
+    --accent-dark: #8a3422;
+    --border: #2a2a30;
+    --highlight: #d4a853;
+    --section-gap: 6rem;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.72;
+    font-size: 17px;
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 4rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40%; left: -20%;
+    width: 140%; height: 180%;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 50%, rgba(196,93,62,0.08), transparent),
+      radial-gradient(ellipse 40% 60% at 80% 30%, rgba(212,168,83,0.05), transparent);
+    pointer-events: none;
+  }
+
+  .hero-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.2s forwards;
+  }
+
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.6rem, 6vw, 4.8rem);
+    font-weight: 900;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.4s forwards;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent-light);
+  }
+
+  .hero-subtitle {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.1rem, 2.2vw, 1.5rem);
+    font-weight: 400;
+    color: var(--text-muted);
+    line-height: 1.5;
+    max-width: 680px;
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.6s forwards;
+  }
+
+  .hero-rule {
+    width: 80px;
+    height: 2px;
+    background: var(--accent);
+    border: none;
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.8s forwards;
+  }
+
+  .hero-overview {
+    color: var(--text-muted);
+    max-width: 680px;
+    font-size: 1.02rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 1s forwards;
+  }
+
+  .hero-overview p + p { margin-top: 1rem; }
+
+  /* ── NAV DOTS ── */
+  .side-nav {
+    position: fixed;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .side-nav a {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: all 0.3s;
+    position: relative;
+  }
+
+  .side-nav a:hover,
+  .side-nav a.active {
+    background: var(--accent);
+    transform: scale(1.4);
+  }
+
+  .side-nav a::after {
+    content: attr(data-label);
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .side-nav a:hover::after { opacity: 1; }
+
+  /* ── SECTIONS ── */
+  .section {
+    padding: var(--section-gap) 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 5rem;
+    font-weight: 900;
+    color: var(--accent-dark);
+    opacity: 0.3;
+    line-height: 1;
+    margin-bottom: -0.5rem;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 0.4rem;
+  }
+
+  .section-subtitle {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.15rem;
+    color: var(--highlight);
+    margin-bottom: 2rem;
+  }
+
+  .section-divider {
+    width: 50px;
+    height: 2px;
+    background: var(--accent);
+    border: none;
+    margin: 2.5rem 0;
+  }
+
+  /* ── CONTEXT BLOCKS ── */
+  .context-block {
+    border-left: 3px solid var(--accent-dark);
+    padding: 1.2rem 1.5rem;
+    margin: 2rem 0;
+    background: rgba(196,93,62,0.04);
+    border-radius: 0 6px 6px 0;
+    font-style: italic;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  .context-block p + p { margin-top: 0.8rem; }
+
+  /* ── PROSE ── */
+  .prose { max-width: 740px; }
+  .prose p + p { margin-top: 1.2rem; }
+  .prose h3 {
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent-light);
+    margin-top: 2.5rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .prose strong { font-weight: 600; color: #f0ede6; }
+
+  /* ── FIGURE / IMAGE ── */
+  .fig {
+    margin: 2.5rem 0;
+    position: relative;
+  }
+
+  .fig-full { margin: 3rem -2rem; }
+
+  .fig img {
+    width: 100%;
+    max-width: 680px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    display: block;
+    margin: 0 auto;
+  }
+
+  .fig-caption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.6rem;
+    letter-spacing: 0.02em;
+  }
+
+  .fig-row {
+    display: grid;
+    gap: 1.2rem;
+    margin: 2.5rem 0;
+  }
+
+  .fig-row-2 { grid-template-columns: 1fr 1fr; }
+  .fig-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .fig-row .fig { margin: 0; }
+  .fig-row .fig img { max-width: 100%; }
+
+  /* ── METRICS STRIP ── */
+  .metrics {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    padding: 1.5rem 0;
+    margin: 2rem 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .metric {
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .metric-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent-light);
+    line-height: 1.2;
+  }
+
+  .metric-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+  }
+
+  /* ── POLICY BOX ── */
+  .policy-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem 2rem;
+    margin: 2.5rem 0;
+  }
+
+  .policy-box-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--highlight);
+    margin-bottom: 1rem;
+  }
+
+  .policy-box p + p { margin-top: 0.8rem; }
+
+  /* ── CONCLUSION ── */
+  .conclusion {
+    padding: 6rem 2rem;
+    text-align: center;
+    position: relative;
+  }
+
+  .conclusion::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+  }
+
+  .conclusion-inner {
+    max-width: 740px;
+    margin: 0 auto;
+  }
+
+  .conclusion h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+    margin-bottom: 2rem;
+  }
+
+  .conclusion p + p { margin-top: 1rem; }
+
+  .conclusion .final-line {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.3rem;
+    color: var(--accent-light);
+    margin-top: 2.5rem;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 3rem 2rem;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .fig-row-2, .fig-row-3 { grid-template-columns: 1fr; }
+    .fig-full { margin: 2rem 0; }
+    .side-nav { display: none; }
+    .metrics { flex-direction: column; gap: 1.2rem; }
+    .section { padding: 4rem 1.2rem; }
+  }
+
+  @media (max-width: 480px) {
+    body { font-size: 16px; }
+    .section-number { font-size: 3.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Side Navigation -->
+<nav class="side-nav" id="sideNav">
+  <a href="#hero" data-label="Top"></a>
+  <a href="#s1" data-label="Accessibility"></a>
+  <a href="#s2" data-label="Bus Reliability"></a>
+  <a href="#s3" data-label="Commercial Viability"></a>
+  <a href="#s4" data-label="Compounding Burden"></a>
+  <a href="#conclusion" data-label="Conclusion"></a>
+  <a href="#reproducibility" data-label="Reproducibility"></a>
+</nav>
+
+<!-- ═══════════════════════════════════════════
+     HERO
+     ═══════════════════════════════════════════ -->
+<header class="hero" id="hero">
+  <div class="hero-inner">
+    <p class="hero-tag">Spatial Analysis Portfolio</p>
+    <h1>Boston's Layered <em>Inequality</em></h1>
+    <p class="hero-subtitle">A Spatial Analysis of Access, Reliability, and Market Structure</p>
+    <hr class="hero-rule">
+    <div class="hero-overview">
+      <p>Boston is widely recognised for economic growth, innovation, and institutional strength. Yet spatial disparities remain deeply embedded in the city's structure. These disparities are not confined to income differences or demographic variation. They appear in access to essential services, in the reliability of public transit, and in the distribution of commercial activity.</p>
+      <p>This portfolio presents four linked analyses examining how structural disadvantage accumulates across systems. The work integrates spatial accessibility modelling, predictive reliability analysis, commercial viability scoring, and a composite burden index to identify neighbourhoods where inequities reinforce one another.</p>
+      <p>The central finding is that <strong>disadvantage in Boston is layered</strong>. Social vulnerability, limited service access, transit fragility, and uneven market investment overlap geographically. When these systems intersect, the impact on residents compounds.</p>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 1 — URBAN ACCESSIBILITY
+     ═══════════════════════════════════════════ -->
+<section class="section" id="s1">
+  <div class="reveal">
+    <div class="section-number">01</div>
+    <h2 class="section-title">Urban Accessibility &amp; Inequality Index</h2>
+    <p class="section-subtitle">When Social Vulnerability Meets Physical Distance</p>
+  </div>
+
+  <div class="context-block reveal">
+    <p>Consider a household in Mattapan. The primary wage earner relies on public transit to reach work. A nearby grocery store closed several years ago. The nearest full-service healthcare facility requires two bus transfers. Daily routines involve travel time, uncertainty, and limited local options.</p>
+    <p>These constraints do not appear in income data alone. They are spatial.</p>
+  </div>
+
+  <div class="prose reveal">
+    <p>This project examines whether socially vulnerable communities in Boston also face systematically poorer access to essential urban services. The analysis integrates the <strong>CDC Social Vulnerability Index (SVI)</strong> at census tract level, <strong>OpenStreetMap</strong> data for healthcare facilities, food retail, parks, and transit stops, and Boston census tract geometries.</p>
+    <p>Each tract is represented by its centroid. Straight-line distance to the nearest service location is calculated for each service category. Distances are normalised to risk scores and combined into a composite <strong>Urban Accessibility Index</strong>. This accessibility score is then combined with SVI to construct the <strong>Urban Accessibility &amp; Inequality Index</strong>.</p>
+  </div>
+
+  <hr class="section-divider">
+
+  <div class="prose reveal">
+    <h3>Findings</h3>
+    <p>The SVI map reveals a clear spatial pattern. Higher vulnerability clusters in southern Boston, particularly in <strong>Dorchester, Roxbury, Mattapan, and parts of Hyde Park</strong>. These tracts form a contiguous corridor of socioeconomic vulnerability, visible as a deep-red band running through the city's southern half.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="boston_svi_quantiles.png" alt="Boston Census Tracts — SVI Quantiles, 5 classes. Deep reds concentrate in southern Boston corridors through Dorchester, Roxbury, and Mattapan.">
+    <p class="fig-caption">Fig 1.1 — Social Vulnerability Index by census tract. The darkest quintile (SVI 0.87–1.00) forms a nearly continuous corridor through Roxbury, Dorchester, and Mattapan, while Back Bay, Beacon Hill, and the waterfront remain in the lightest category.</p>
+  </div>
+
+  <div class="prose reveal">
+    <p>The multi-service accessibility map shows a different pattern. Access varies across the city and is service-specific. Healthcare and food retail display the strongest spatial disparities. Notably, some lower-vulnerability tracts in the periphery show weaker access (appearing in yellow), while certain high-vulnerability areas closer to the urban core maintain moderate access due to proximity to transit and commercial corridors.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="boston_urban_accessibility_index.png" alt="Boston Urban Accessibility Index — Multi-service Access map. Dark purple/blue indicates best access in the central core; yellow at peripheries indicates poorest access.">
+    <p class="fig-caption">Fig 1.2 — Urban Accessibility Index (multi-service composite). Central and downtown tracts (dark purple) enjoy the strongest access. Southern and peripheral tracts, especially in Mattapan, Hyde Park, and West Roxbury, show the highest access deficits (yellow, scores 0.30–0.69).</p>
+  </div>
+
+  <div class="prose reveal">
+    <p>The composite <strong>Urban Accessibility &amp; Inequality Index</strong> isolates the most critical zones — areas where vulnerability and access disadvantage coincide. The highest index scores concentrate in <strong>Roxbury, Dorchester, and Mattapan</strong>. These are areas where both dimensions are simultaneously elevated, creating a compounded spatial penalty for residents.</p>
+    <p>The analysis demonstrates that poor access alone does not define priority. The most policy-relevant areas are those where social vulnerability amplifies the impact of distance.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="boston_urban_accessibility_inequality_index.png" alt="Boston Urban Accessibility & Inequality Index — combined SVI and access. Deepest reds cluster through southern Boston's high-vulnerability, low-access corridor.">
+    <p class="fig-caption">Fig 1.3 — Urban Accessibility &amp; Inequality Index (combined). The darkest tracts (0.55–0.74) reveal the overlap zone — communities that are both socially vulnerable and far from essential services. This corridor runs from Roxbury south through Dorchester and Mattapan with extensions into East Boston and parts of Brighton.</p>
+  </div>
+
+  <div class="policy-box reveal">
+    <p class="policy-box-title">Policy Implications</p>
+    <p><strong>Healthcare and food access</strong> should be prioritised in high-SVI southern tracts. Incentives for community clinics, mobile health units, and fresh food retail development should target these zones.</p>
+    <p><strong>Service siting decisions</strong> should integrate vulnerability weighting. Planning processes often optimise for geographic coverage. Incorporating vulnerability metrics would better align investment with need.</p>
+    <p><strong>Transit-accessible service hubs</strong> should be developed in high-compound areas. Co-locating health, food, and public services within reliable transit corridors would reduce daily burden. Accessibility planning must be equity-weighted rather than spatially neutral.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 2 — BUS RELIABILITY
+     ═══════════════════════════════════════════ -->
+<section class="section" id="s2">
+  <div class="reveal">
+    <div class="section-number">02</div>
+    <h2 class="section-title">Bus Service Failure Risk</h2>
+    <p class="section-subtitle">Structural Fragility in the MBTA Bus Network</p>
+  </div>
+
+  <div class="context-block reveal">
+    <p>A late evening bus along Columbia Road arrives twenty minutes behind schedule. Riders miss connections and wait in low-lit conditions. For shift workers, reliability determines job security.</p>
+    <p>Transit access is insufficient if reliability is unstable.</p>
+  </div>
+
+  <div class="prose reveal">
+    <p>This project examines where and when bus service failure risk concentrates and identifies structural drivers of that risk. The analysis uses <strong>14.9 million MBTA bus event records</strong> from 2024, GTFS stop locations, scheduled headway data, weather indicators, and derived spatial indicators including distance to CBD, stop density, and intersection density.</p>
+    <p>The final modelling dataset includes 17 features with a binary service failure target. Three modelling approaches were applied: logistic regression (baseline), gradient boosting, and <strong>LightGBM</strong> (final model).</p>
+  </div>
+
+  <div class="metrics reveal">
+    <div class="metric">
+      <div class="metric-value">14.9M</div>
+      <div class="metric-label">Bus event records</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value">0.724</div>
+      <div class="metric-label">ROC-AUC</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value">0.162</div>
+      <div class="metric-label">PR-AUC</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value">~6%</div>
+      <div class="metric-label">Baseline failure rate</div>
+    </div>
+  </div>
+
+  <hr class="section-divider">
+
+  <div class="prose reveal">
+    <h3>Temporal Concentration</h3>
+    <p>The month-by-hour heatmap reveals strong time-of-day effects. <strong>Hour 1 (1 AM)</strong> consistently exhibits the highest predicted failure probability, reaching 0.35–0.38 during winter months. Evening hours between <strong>19:00 and 22:00</strong> display sustained elevated risk across several months. Early morning hours (3–6 AM) show comparatively lower risk, while the afternoon-to-evening build-up is visible as a broad red band from roughly hour 13 through hour 22. These patterns remain robust after accounting for observation counts.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="Month-Hour-Risk.png" alt="Heatmap of predicted bus service failure risk by month and hour. Deep red at hour 1 and across evening hours 13-22; lighter in early morning.">
+    <p class="fig-caption">Fig 2.1 — Predicted service failure risk by month and hour. The 1 AM spike likely reflects end-of-service scheduling fragility. The sustained afternoon-to-evening band (hours 13–22) captures congestion-related delays across all months, intensifying in winter (months 1–3) and autumn (months 10–12).</p>
+  </div>
+
+  <div class="prose reveal">
+    <h3>Spatial Clustering</h3>
+    <p>Stop-level mean predicted probabilities across the Greater Boston network show a gradient from low-risk (dark purple) to high-risk (yellow). Most stops cluster in the moderate range, but a clear set of outliers appears in the Longwood–Brookline–southern Boston corridor.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="GreaterBostonStops.png" alt="Scatter map of all MBTA bus stops coloured by mean predicted failure probability, from dark purple (low) to yellow (high).">
+    <p class="fig-caption">Fig 2.2 — All MBTA bus stops coloured by mean predicted failure probability. The yellow-green high-risk cluster is concentrated in central-south Boston, while most peripheral and suburban stops show lower risk (dark purple/teal).</p>
+  </div>
+
+  <div class="prose reveal">
+    <p>Filtering to the <strong>35 high-risk stops</strong> (mean risk ≥ 0.30) — of which 21 lie within Boston city boundaries — reveals clear corridor-level fragility rather than isolated anomalies. These stops cluster along <strong>Columbia Road, Albany Street, Washington Street, Longwood Avenue, and Western Avenue</strong>, with an additional cluster near Revere in the north.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="HighRiskStops.png" alt="Map of Greater Boston showing only the 35 high-risk bus stops as red dots, clustered along identifiable corridors in central-south Boston and Revere.">
+    <p class="fig-caption">Fig 2.3 — High-risk bus stops (mean risk ≥ 0.30). The tight clustering in the Longwood–Brookline–Roxbury corridor and the Washington Street axis south toward Mattapan highlights corridor-level fragility. A secondary cluster appears near Revere.</p>
+  </div>
+
+  <div class="prose reveal">
+    <h3>Structural Drivers</h3>
+    <p>SHAP analysis highlights the strongest contributors to predicted risk. The beeswarm plot shows that <strong>distance to CBD</strong> and <strong>hour of day</strong> have the widest spread of SHAP values, indicating they are the most influential features. <strong>Scheduled headway</strong> shows a clear directional pattern: longer headways (red/high feature values) consistently push predictions toward failure. <strong>Intersection count</strong> within 500m shows that high-complexity environments elevate risk. Weather variables like temperature and precipitation show comparatively modest and clustered SHAP impacts.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="SHAP_beeswarm.png" alt="SHAP beeswarm plot showing feature importance. dist_to_cbd_m, hour, scheduled_headway_min, and intersection_count_500m are the top features.">
+    <p class="fig-caption">Fig 2.4 — SHAP beeswarm plot. Each dot represents a single prediction. Red (high feature value) dots pushed rightward indicate that higher values of that feature increase failure risk. The clear red-right pattern for scheduled_headway_min confirms: longer headways systematically increase failure probability.</p>
+  </div>
+
+  <div class="prose reveal">
+    <p>The waterfall plot for a single high-risk observation makes the decomposition concrete. A stop with a <strong>13.5-minute headway</strong> at <strong>2,289m from CBD</strong> receives a cumulative SHAP push of +3.46 above the base log-odds, resulting in a predicted failure probability of 0.509. Scheduled headway alone contributes +1.34 — the single largest driver.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="SHAP_waterfall.png" alt="SHAP waterfall plot for one high-risk observation. Scheduled headway contributes +1.34, distance to CBD +0.9, stop density +0.4, intersection count +0.36.">
+    <p class="fig-caption">Fig 2.5 — SHAP waterfall for a single high-risk stop-event. The cumulative rightward push from operational and spatial features drives the final prediction to f(x)&nbsp;=&nbsp;0.509. This decomposition shows that reliability risk is not random — it accumulates from operational design and urban form.</p>
+  </div>
+
+  <div class="policy-box reveal">
+    <p class="policy-box-title">Policy Implications</p>
+    <p><strong>Headway redesign</strong> on high-risk corridors. Reducing scheduled headways in identified fragile corridors can materially lower failure probability.</p>
+    <p><strong>Corridor-based reliability interventions.</strong> Bus lanes, signal priority, and stop consolidation should be prioritised along Columbia Road, Washington Street, and other clustered high-risk corridors.</p>
+    <p><strong>Evening and late-night service stabilisation.</strong> Reliability resources should be concentrated during 19:00–22:00 and early overnight periods.</p>
+    <p><strong>Complexity-aware scheduling.</strong> Routes with high intersection density should incorporate buffer adjustments. Transit reliability should be treated as an equity issue, particularly where high-risk corridors overlap with high vulnerability.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 3 — COMMERCIAL VIABILITY
+     ═══════════════════════════════════════════ -->
+<section class="section" id="s3">
+  <div class="reveal">
+    <div class="section-number">03</div>
+    <h2 class="section-title">Boston Commercial Viability Index</h2>
+    <p class="section-subtitle">Identifying Underserved Markets</p>
+  </div>
+
+  <div class="context-block reveal">
+    <p>In Mission Hill, several transit stops operate within a small radius, and residential density is stable. However, local commercial offerings remain sparse. Residents travel to adjacent neighbourhoods for basic retail needs.</p>
+    <p>Market outcomes do not always reflect underlying demand.</p>
+  </div>
+
+  <div class="prose reveal">
+    <p>This project constructs a tract-level <strong>Commercial Viability Index (CVI)</strong> and a <strong>Market Gap Score</strong> to identify areas where commercial supply does not match demand fundamentals. Data sources include 2020 census tract boundaries, ACS 5-year demographic estimates, MBTA GTFS transit stops, and OpenStreetMap commercial POIs.</p>
+    <p>The CVI combines three pillars: <strong>Transit Access (35%)</strong>, <strong>Demographic Catchment (35%)</strong>, and <strong>POI Density (30%, inverted-U scoring)</strong>. The inverted-U approach recognises that very low and very high commercial density both reduce viability — too few businesses signals market failure, while oversaturation increases competition and lowers marginal returns.</p>
+    <p>The Market Gap Score calculates demand (Transit + Demographics) minus supply (POI density).</p>
+  </div>
+
+  <hr class="section-divider">
+
+  <div class="prose reveal">
+    <h3>Data Layers</h3>
+    <p>Before constructing the index, it is helpful to see all the underlying spatial layers together. The map below shows transit stops (bus, subway, light rail) and commercial POIs overlaid on Boston's tract boundaries. The concentration of POIs in the downtown core and along major transit spines is immediately visible, as is the sparsity in southern and western tracts.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="check_all_layers.png" alt="All data layers overlaid on Boston tracts — POIs (light blue), bus stops (orange), subway (red), light rail (green). Dense in core, sparse in south.">
+    <p class="fig-caption">Fig 3.1 — All layers: POIs, bus, subway, and light rail stops. The visual confirms the spatial decoupling central to this analysis — transit infrastructure extends into residential neighbourhoods, but commercial POIs do not follow at the same density.</p>
+  </div>
+
+  <div class="prose reveal">
+    <h3>The Three Pillars</h3>
+    <p>Each CVI pillar captures a distinct demand or supply dimension. <strong>Transit access</strong> clusters along the Orange and Green Line corridors, with strong scores also appearing in East Boston and parts of Brighton that benefit from bus network density. <strong>Demographic catchment</strong> is broadly distributed, with notable strength in the outer residential neighbourhoods — precisely the areas with thinner commercial presence. <strong>POI density</strong> (scored as an inverted U) peaks in middle-density tracts; the lowest scores appear both in the commercial desert of the far south and in the oversaturated downtown core.</p>
+  </div>
+
+  <div class="fig-row fig-row-3 reveal">
+    <div class="fig">
+      <img src="pillar1_transit.png" alt="Pillar 1 — Transit Access. Dark blue indicates strong access along Orange/Green line corridors.">
+      <p class="fig-caption">Fig 3.2a — Pillar 1: Transit Access</p>
+    </div>
+    <div class="fig">
+      <img src="pillar2_demographics.png" alt="Pillar 2 — Demographic Catchment. Dark green in outer residential neighbourhoods with strong population base.">
+      <p class="fig-caption">Fig 3.2b — Pillar 2: Demographic Catchment</p>
+    </div>
+    <div class="fig">
+      <img src="pillar3_poi_density.png" alt="Pillar 3 — POI Density (Inverted-U). Darkest brown in moderate-density tracts; lightest in both deserts and oversaturated core.">
+      <p class="fig-caption">Fig 3.2c — Pillar 3: POI Density (Inverted-U)</p>
+    </div>
+  </div>
+
+  <div class="prose reveal">
+    <h3>Composite CVI</h3>
+    <p>The composite Commercial Viability Index brings the three pillars together. The highest CVI scores (darkest shading) appear along the main transit spines and in tracts with balanced transit, demographics, and moderate commercial density. Several labelled tracts score above 84, indicating strong commercial fundamentals. The southern residential belt, despite strong demographic scores, is held back by weak transit access and thin POI counts.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="cvi_composite.png" alt="Boston Commercial Viability Index map. Darkest tracts (CVI 63-100) along transit corridors; lightest (0-26) in far south residential areas.">
+    <p class="fig-caption">Fig 3.3 — Composite CVI (0–100). Labelled tracts include scores of 96 (near Sullivan Square), 94 (near Jackson Square), and 100 (near Mattapan, benefiting from the Mattapan Trolley and bus network). The wide score range (0–100) reflects genuine structural variation in commercial potential across the city.</p>
+  </div>
+
+  <div class="prose reveal">
+    <h3>Market Gap</h3>
+    <p>The Market Gap analysis identifies tracts where demand exceeds supply. In the map below, <strong>red/warm tones</strong> indicate underserved markets (positive gap — demand outpaces supply), while <strong>blue/cool tones</strong> indicate oversaturated markets (negative gap — supply exceeds residential demand). The most underserved areas include <strong>Mission Hill, Mattapan, parts of Dorchester, Brighton, and Jamaica Plain</strong> — tracts that combine transit presence and residential base with limited commercial activity.</p>
+    <p>Oversaturated tracts include <strong>Chinatown, Allston, and the North End</strong>. Residential-only demand metrics partially explain this classification, as daytime population from commuters, students, and tourists is not captured in census data.</p>
+    <p>The key insight is that <strong>transit access and commercial density are spatially decoupled</strong>. Where transit goes, retail does not automatically follow.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="market_gap.png" alt="Boston Commercial Market Gap map. Red tracts (underserved, positive gap) in southern and western Boston; blue (oversaturated) in downtown, Allston, North End.">
+    <p class="fig-caption">Fig 3.4 — Market Gap Score. The red-to-blue diverging colour scale makes the mismatch visible. Several southern tracts show gaps exceeding +40, meaning demand fundamentals are far ahead of current commercial supply. The deepest blue tracts (-80 to -100) in the core reflect oversaturation relative to residential population.</p>
+  </div>
+
+  <div class="policy-box reveal">
+    <p class="policy-box-title">Policy Implications</p>
+    <p><strong>Targeted commercial incentives</strong> in underserved tracts. Zoning flexibility, small business grants, and streamlined permitting should prioritise high positive gap areas.</p>
+    <p><strong>Transit-oriented commercial activation.</strong> Areas with strong transit but thin retail presence should receive coordinated development support.</p>
+    <p><strong>Data-informed site selection tools.</strong> The CVI can support strategic retail lending and municipal investment decisions. Commercial planning should align with transit and demographic fundamentals rather than rely solely on historical investment patterns.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 4 — COMPOUNDING BURDEN
+     ═══════════════════════════════════════════ -->
+<section class="section" id="s4">
+  <div class="reveal">
+    <div class="section-number">04</div>
+    <h2 class="section-title">Compounding Burden Index</h2>
+    <p class="section-subtitle">Where Systems Converge</p>
+  </div>
+
+  <div class="context-block reveal">
+    <p>A family in Dorchester faces high social vulnerability, limited nearby services, unreliable bus corridors, and thin local commercial infrastructure. Each constraint increases exposure to risk. None is sufficient alone to define the problem. Together, they define a lived experience of compounding disadvantage.</p>
+  </div>
+
+  <div class="prose reveal">
+    <p>This final project integrates three dimensions — <strong>social vulnerability</strong>, <strong>transit poverty and reliability risk</strong>, and <strong>commercial market gap</strong> — into a single <strong>Compounding Burden Index (CBI)</strong> that quantifies where these pressures overlap.</p>
+  </div>
+
+  <hr class="section-divider">
+
+  <div class="prose reveal">
+    <h3>Component Distributions</h3>
+    <p>Before compositing, each dimension shows a distinct distribution. <strong>SVI (D1)</strong> is roughly bimodal, with clusters of tracts at both low and high vulnerability. <strong>Transit poverty (D2)</strong> is heavily left-skewed — most tracts have low transit burden, but a tail extends into high values. <strong>Commercial gap (D3)</strong> distributes more evenly across the spectrum. The variation in these shapes means the CBI is not simply an average; it captures the intersection of structurally different patterns.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="Screenshot_2026-02-25_at_5_56_41_PM.png" alt="Histogram of three CBI component distributions. SVI is bimodal, transit poverty left-skewed, commercial gap more uniform.">
+    <p class="fig-caption">Fig 4.1 — Component distributions (0 = least burden, 1 = most). The different shapes confirm that each dimension captures a distinct structural pattern, making their intersection analytically meaningful.</p>
+  </div>
+
+  <div class="prose reveal">
+    <h3>CBI Distribution</h3>
+    <p>The final CBI distribution is approximately normal with a slight right skew. Most tracts cluster between 0.25 and 0.55, but a meaningful tail extends past the <strong>80th percentile threshold at 0.58</strong>. The tracts in this tail — roughly 20% of all tracts — experience simultaneous burden across multiple dimensions.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="Screenshot_2026-02-25_at_5_56_52_PM.png" alt="CBI final distribution histogram with 80th percentile line at 0.58. Right-skewed tail of high-burden tracts.">
+    <p class="fig-caption">Fig 4.2 — CBI score distribution across all Boston census tracts. The red dashed line marks the 80th percentile (0.58), delineating the high-burden subset. The colour gradient from green (low burden) to red (high burden) reinforces the skewness — most of the city sits below the threshold, but the tail is substantive.</p>
+  </div>
+
+  <div class="prose reveal">
+    <h3>Spatial Pattern</h3>
+    <p>Mapping CBI by tract centroid (with bubble size proportional to population) reveals the geographic coherence of compounding burden. The warmest tones (orange-red, highest CBI) concentrate in <strong>southern Boston</strong> — particularly in the latitude band between roughly 42.27° and 42.31°N — corresponding to Dorchester, Mattapan, and Roxbury. Many of the highest-burden tracts are also among the most populous, amplifying the number of residents affected.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="Screenshot_2026-02-25_at_5_57_05_PM.png" alt="Bubble map of CBI by tract centroid. Warm orange-red bubbles cluster in southern Boston; green in northern areas. Bubble size shows population.">
+    <p class="fig-caption">Fig 4.3 — CBI by tract centroid (bubble = population). The spatial concentration is striking: the highest-burden tracts are not scattered randomly but form a geographically coherent zone in the city's south.</p>
+  </div>
+
+  <div class="prose reveal">
+    <h3>Policy Triage</h3>
+    <p>A triage matrix categorises tracts by burden level (CBI score) and population size (log scale). Four quadrants emerge: <strong>Urgent</strong> (high burden, high population — red), <strong>Targeted</strong> (high burden, moderate population — orange), <strong>Monitor</strong> (lower burden, high population — blue), and <strong>Baseline</strong> (lower burden, lower population — grey). The most urgent tracts represent thousands of residents affected simultaneously by vulnerability, limited access, unreliable transit, and market underinvestment.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="Screenshot_2026-02-25_at_5_57_26_PM.png" alt="Triage scatter plot: CBI score (x) vs log population (y). Red URGENT dots in upper-right, orange TARGETED below, blue MONITOR upper-left, grey BASELINE lower-left.">
+    <p class="fig-caption">Fig 4.4 — Policy triage matrix. The upper-right quadrant (URGENT) contains the tracts with both the highest burden scores and the largest populations — these are the highest-priority zones for integrated intervention. The TARGETED quadrant captures smaller but equally burdened communities that should not be overlooked.</p>
+  </div>
+
+  <div class="prose reveal">
+    <p>The top 12 URGENT tracts by population are shown below, with neighbourhood identifications based on the BPDA's census-tract-to-neighbourhood crosswalk. The largest — <strong>tract 140400 (Roslindale)</strong> with a population of 9,131 and CBI of 0.54 — illustrates the scale of compounding burden. <strong>Tract 101002 (Dorchester)</strong> carries the highest CBI in this set at 0.76. The full roster spans some of Boston's most historically underinvested communities:</p>
+  </div>
+
+  <div class="policy-box reveal" style="margin-bottom: 1.5rem;">
+    <p class="policy-box-title">Top 12 Urgent Tracts — Neighbourhood Identification</p>
+    <table style="width:100%; border-collapse:collapse; font-size:0.92rem; margin-top:0.5rem;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border); text-align:left;">
+          <th style="padding:0.5rem 0.8rem; color:var(--highlight); font-family:'JetBrains Mono',monospace; font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase;">Tract FIPS</th>
+          <th style="padding:0.5rem 0.8rem; color:var(--highlight); font-family:'JetBrains Mono',monospace; font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase;">Neighbourhood</th>
+          <th style="padding:0.5rem 0.8rem; color:var(--highlight); font-family:'JetBrains Mono',monospace; font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase;">Population</th>
+          <th style="padding:0.5rem 0.8rem; color:var(--highlight); font-family:'JetBrains Mono',monospace; font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase;">CBI</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid rgba(42,42,48,0.5);"><td style="padding:0.45rem 0.8rem; font-family:'JetBrains Mono',monospace; font-size:0.82rem;">140400</td><td style="padding:0.45rem 0.8rem;">Roslindale</td><td style="padding:0.45rem 0.8rem;">9,131</td><td style="padding:0.45rem 0.8rem;">0.54</td></tr>
+        <tr style="border-bottom:1px solid rgba(42,42,48,0.5);"><td style="padding:0.45rem 0.8rem; font-family:'JetBrains Mono',monospace; font-size:0.82rem;">100100</td><td style="padding:0.45rem 0.8rem;">Dorchester</td><td style="padding:0.45rem 0.8rem;">6,716</td><td style="padding:0.45rem 0.8rem;">0.63</td></tr>
+        <tr style="border-bottom:1px solid rgba(42,42,48,0.5);"><td style="padding:0.45rem 0.8rem; font-family:'JetBrains Mono',monospace; font-size:0.82rem;">100601</td><td style="padding:0.45rem 0.8rem;">Dorchester</td><td style="padding:0.45rem 0.8rem;">6,521</td><td style="padding:0.45rem 0.8rem;">0.57</td></tr>
+        <tr style="border-bottom:1px solid rgba(42,42,48,0.5);"><td style="padding:0.45rem 0.8rem; font-family:'JetBrains Mono',monospace; font-size:0.82rem;">101001</td><td style="padding:0.45rem 0.8rem;">Dorchester</td><td style="padding:0.45rem 0.8rem;">6,346</td><td style="padding:0.45rem 0.8rem;">0.60</td></tr>
+        <tr style="border-bottom:1px solid rgba(42,42,48,0.5);"><td style="padding:0.45rem 0.8rem; font-family:'JetBrains Mono',monospace; font-size:0.82rem;">101002</td><td style="padding:0.45rem 0.8rem;">Dorchester</td><td style="padding:0.45rem 0.8rem;">6,256</td><td style="padding:0.45rem 0.8rem; color:var(--accent-light); font-weight:600;">0.76</td></tr>
+        <tr style="border-bottom:1px solid rgba(42,42,48,0.5);"><td style="padding:0.45rem 0.8rem; font-family:'JetBrains Mono',monospace; font-size:0.82rem;">092400</td><td style="padding:0.45rem 0.8rem;">Dorchester</td><td style="padding:0.45rem 0.8rem;">6,136</td><td style="padding:0.45rem 0.8rem;">0.57</td></tr>
+        <tr style="border-bottom:1px solid rgba(42,42,48,0.5);"><td style="padding:0.45rem 0.8rem; font-family:'JetBrains Mono',monospace; font-size:0.82rem;">082100</td><td style="padding:0.45rem 0.8rem;">Dorchester</td><td style="padding:0.45rem 0.8rem;">5,980</td><td style="padding:0.45rem 0.8rem;">0.58</td></tr>
+        <tr style="border-bottom:1px solid rgba(42,42,48,0.5);"><td style="padding:0.45rem 0.8rem; font-family:'JetBrains Mono',monospace; font-size:0.82rem;">130406</td><td style="padding:0.45rem 0.8rem;">Mattapan</td><td style="padding:0.45rem 0.8rem;">5,824</td><td style="padding:0.45rem 0.8rem;">0.62</td></tr>
+        <tr style="border-bottom:1px solid rgba(42,42,48,0.5);"><td style="padding:0.45rem 0.8rem; font-family:'JetBrains Mono',monospace; font-size:0.82rem;">092000</td><td style="padding:0.45rem 0.8rem;">Dorchester</td><td style="padding:0.45rem 0.8rem;">5,751</td><td style="padding:0.45rem 0.8rem;">0.73</td></tr>
+        <tr style="border-bottom:1px solid rgba(42,42,48,0.5);"><td style="padding:0.45rem 0.8rem; font-family:'JetBrains Mono',monospace; font-size:0.82rem;">000502</td><td style="padding:0.45rem 0.8rem;">Back Bay / Beacon Hill</td><td style="padding:0.45rem 0.8rem;">5,382</td><td style="padding:0.45rem 0.8rem;">0.57</td></tr>
+        <tr style="border-bottom:1px solid rgba(42,42,48,0.5);"><td style="padding:0.45rem 0.8rem; font-family:'JetBrains Mono',monospace; font-size:0.82rem;">090100</td><td style="padding:0.45rem 0.8rem;">Roxbury</td><td style="padding:0.45rem 0.8rem;">5,345</td><td style="padding:0.45rem 0.8rem;">0.62</td></tr>
+        <tr><td style="padding:0.45rem 0.8rem; font-family:'JetBrains Mono',monospace; font-size:0.82rem;">050101</td><td style="padding:0.45rem 0.8rem;">Jamaica Plain</td><td style="padding:0.45rem 0.8rem;">5,304</td><td style="padding:0.45rem 0.8rem;">0.64</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:1rem; font-size:0.88rem; color:var(--text-muted);">Neighbourhood assignments based on BPDA 2010/2020 census-tract-to-neighbourhood crosswalk. Six of twelve urgent tracts fall in Dorchester, reinforcing its status as the epicentre of compounding burden. Mattapan, Roxbury, Roslindale, Jamaica Plain, and Back Bay/Beacon Hill each contribute one tract to the urgent set.</p>
+  </div>
+
+  <div class="fig reveal">
+    <img src="Screenshot_2026-02-25_at_5_57_37_PM.png" alt="Horizontal bar chart of top 12 URGENT tracts by population. Tract 140400 leads at 9,131 residents (CBI 0.54). Bars coloured red (urgent) and orange (targeted).">
+    <p class="fig-caption">Fig 4.5 — Top 12 URGENT tracts ranked by population. Red bars indicate tracts classified as URGENT; orange bars as TARGETED (borderline). Tract 101002 has the highest CBI (0.76) in this set, while 140400 has the largest affected population.</p>
+  </div>
+
+  <div class="policy-box reveal">
+    <p class="policy-box-title">Policy Implications</p>
+    <p><strong>Corridor-based integrated investment.</strong> High-CBI zones should receive coordinated interventions spanning transit reliability, healthcare access, and commercial activation.</p>
+    <p><strong>Equity-focused capital allocation.</strong> Infrastructure funding decisions should incorporate CBI ranking.</p>
+    <p><strong>Cross-agency planning alignment.</strong> Transportation, economic development, and public health agencies should coordinate interventions within the same high-burden tracts.</p>
+    <p><strong>Performance monitoring.</strong> Annual recalculation of CBI would allow progress tracking and adaptive resource deployment.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     CONCLUSION
+     ═══════════════════════════════════════════ -->
+<section class="conclusion" id="conclusion">
+  <div class="conclusion-inner reveal">
+    <h2>Conclusion</h2>
+    <p>Across four linked analyses, consistent spatial patterns emerge. Social vulnerability clusters in southern Boston. Multi-service access disadvantage overlaps in many of those same tracts. Bus reliability fragility concentrates along identifiable corridors. Commercial underinvestment persists in transit-accessible residential areas.</p>
+    <p>These forces converge in specific census tracts, creating compounded structural burden. The findings support a shift from siloed policy to <strong>corridor-based, equity-weighted intervention</strong>.</p>
+    <p class="final-line">Urban inequality in Boston is embedded in infrastructure, service distribution, and market structure. Strategic planning must therefore integrate these systems rather than address them independently.</p>
+  </div>
+</section>
+
+<section class="section" id="reproducibility" style="border-top: 1px solid var(--border); padding-top: 4rem;">
+  <div class="reveal">
+    <div class="section-number" style="opacity:0.15;">R</div>
+    <h2 class="section-title">Reproducibility &amp; Resources</h2>
+    <p class="section-subtitle">Open Data, Open Methods</p>
+  </div>
+
+  <div class="prose reveal">
+    <p>All analyses in this portfolio are designed to be reproducible. The datasets draw from publicly available sources, and the code, notebooks, and detailed methodological documentation are available on GitHub.</p>
+
+    <h3>Data Sources</h3>
+    <p><strong>CDC Social Vulnerability Index (SVI)</strong> — Census tract-level composite vulnerability scores from the Agency for Toxic Substances and Disease Registry (ATSDR), U.S. Department of Health and Human Services.</p>
+    <p><strong>MBTA GTFS &amp; Bus Event Records</strong> — General Transit Feed Specification static data (stop locations, scheduled headways) and real-time event records from the Massachusetts Bay Transportation Authority open data portal.</p>
+    <p><strong>OpenStreetMap (OSM)</strong> — Point-of-interest data for healthcare facilities, food retail, parks, and commercial establishments, extracted via the Overpass API.</p>
+    <p><strong>American Community Survey (ACS)</strong> — 5-year demographic estimates at the census tract level from the U.S. Census Bureau.</p>
+    <p><strong>Boston Census Tract Geometries</strong> — 2020 TIGER/Line shapefiles and BPDA neighbourhood-to-tract crosswalk for spatial delineation.</p>
+
+    <h3>Code &amp; Workflows</h3>
+    <p>The complete codebase — including data ingestion, spatial processing, model training, SHAP analysis, index construction, and all visualisations — is available at:</p>
+  </div>
+
+  <div class="reveal" style="margin: 1.5rem 0 2rem;">
+    <a href="https://github.com/IrfanTajuddin" target="_blank" rel="noopener noreferrer"
+       style="display:inline-flex; align-items:center; gap:0.6rem; padding:0.8rem 1.4rem;
+              background:var(--bg-card); border:1px solid var(--border); border-radius:6px;
+              color:var(--text); text-decoration:none; font-family:'JetBrains Mono',monospace;
+              font-size:0.85rem; transition: border-color 0.2s, color 0.2s;">
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" style="flex-shrink:0;">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+      github.com/IrfanTajuddin
+    </a>
+  </div>
+
+  <div class="prose reveal">
+    <p>Each project folder contains a detailed workflow document with step-by-step methodology, parameter choices, and limitations. Researchers and practitioners are encouraged to adapt the frameworks for other metropolitan areas.</p>
+
+    <h3>Tools &amp; Libraries</h3>
+    <p>Python (pandas, geopandas, scikit-learn, LightGBM, SHAP), OpenStreetMap via Overpass API, GTFS parsing utilities, and matplotlib/contextily for cartographic output. Spatial operations use projected coordinate reference systems (Massachusetts State Plane) to ensure accurate distance calculations.</p>
+
+    <h3>Citation</h3>
+    <p style="font-family:'JetBrains Mono',monospace; font-size:0.82rem; color:var(--text-muted); background:var(--bg-card); padding:1rem 1.2rem; border-radius:4px; border:1px solid var(--border);">
+      Tajuddin, I. (2026). Boston's Layered Inequality: A Spatial Analysis of Access, Reliability, and Market Structure. Available at: github.com/IrfanTajuddin
+    </p>
+  </div>
+</section>
+
+<footer>
+  Boston's Layered Inequality — Spatial Analysis Portfolio &nbsp;·&nbsp; 2026
+</footer>
+
+<!-- ── SCROLL REVEAL ── -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(el => observer.observe(el));
+
+  // Side nav active state
+  const sections = document.querySelectorAll('.hero, .section, .conclusion');
+  const navLinks = document.querySelectorAll('.side-nav a');
+  const secObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = e.target.id;
+        navLinks.forEach(l => l.classList.remove('active'));
+        const link = document.querySelector(`.side-nav a[href="#${id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(s => secObserver.observe(s));
+});
+</script>
+
+</body>
+</html>
